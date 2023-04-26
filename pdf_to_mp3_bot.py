@@ -4,12 +4,12 @@ from telegram.ext import (Updater, CommandHandler, CallbackContext, MessageHandl
 from gtts import gTTS
 import pdfplumber
 import settings
-import os
 
 # Токен
 TOKEN = settings.TOKEN
 bot = telegram.Bot(token=TOKEN)
 language = ''
+
 
 # Кнопка "Отправить файл"
 def button1(update, context):
@@ -96,7 +96,7 @@ def main() -> None:
 
     # Запускаем бота
     updater.start_polling()
-    print('Started')
+    print('Бот запущен')
     updater.idle()
 
 
