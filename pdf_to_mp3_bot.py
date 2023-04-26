@@ -1,122 +1,104 @@
 import telegram
-from telegram import Update, ReplyKeyboardMarkup, InlineKeyboardMarkup, InlineKeyboardButton, KeyboardButton
-from telegram.ext import (
-    Updater,
-    CommandHandler,
-    CallbackContext,
-    TypeHandler,
-    MessageHandler,
-    Filters,
-    CallbackQueryHandler
-)
+from telegram import Update, ReplyKeyboardMarkup, KeyboardButton
+from telegram.ext import (Updater, CommandHandler, CallbackContext, MessageHandler, Filters)
 from gtts import gTTS
 import pdfplumber
-from pathlib import Path
-import urllib.request
+import settings
+import os
 
-# Здесь нужно указать токен вашего бота
-TOKEN = '5764444819:AAEUpn_tHlvB_Dv4aqOCUTlB8LrkV9fG9Vw'
+# Токен
+TOKEN = settings.TOKEN
 bot = telegram.Bot(token=TOKEN)
+language = ''
 
-# Перечень кнопок
-button1 = KeyboardButton('Отправить pdf файл')
-button2 = KeyboardButton('Выбрать русский язык')
-button3 = KeyboardButton('Выбрать английский язык')
-markup = ReplyKeyboardMarkup([[button1], [button2], [button3]], resize_keyboard=True)
-language = 'ru'
-
-
-def ask_what_to_do(update, context):
-    context.bot.send_message(chat_id=update.effective_chat.id, text='Что сделать?', reply_markup=markup)
-
-
+# Кнопка "Отправить файл"
 def button1(update, context):
-    update.message.reply_text('Отправьте мне pdf файл')
+    global language
+    if language == '':
+        update.message.reply_text('Сначала выбери язык, потом отправь pdf файл')
+    else:
+        update.message.reply_text('Отправьте мне pdf файл')
 
 
+# Кнопка "Выбрать русский язык"
 def button2(update, context):
     global language
     language = 'ru'
     print(f'Выбран {language} язык')
+    update.message.reply_text('Выбран русский язык, теперь отправь pdf файл')
 
 
+# Кнопка "Выбрать английский язык"
 def button3(update, context):
     global language
     language = 'en'
     print(f'Выбран {language} язык')
-
-
-def ask_what_to_do(update, context):
-    context.bot.send_message(chat_id=update.effective_chat.id, text='Что сделать?', reply_markup=markup)
+    update.message.reply_text('Выбран английский язык, теперь отправь pdf файл')
 
 
 # Получение и сохранение файла от пользователя
-def handle_pdf(update, context):
-    file_id = update.message.document.file_id
-    file_name = update.message.document.file_name
-    file = bot.getFile(file_id)
-    file_url = file.file_path
-    urllib.request.urlretrieve(file_url, f'{file_name}')
+def pdf_to_mp3(update, context):
+    global language
+    if language == '':
+        update.message.reply_text('Сначала выбери язык, потом отправь pdf файл')
+    else:
+        # Скачиваем файл пдф
+        file_id = update.message.document.file_id
+        file_name = update.message.document.file_name
+        file_path = f'download_pdf/{file_name}'
+        file = bot.get_file(file_id)
+        downloaded_file = file.download(file_path)
+        print('Файл загружен')
 
-    # update.message.reply_text(
-    #     "Если текст на русском языке, напиши 'ru', если на английском - 'en' ")
+        # Считываем пдф и переводим в текст
+        with pdfplumber.PDF(open(downloaded_file, 'rb')) as pdf:
+            pages = []
+            for page in pdf.pages:
+                pages.append(page.extract_text())
+            text = ''.join(pages).replace('\n', '')
 
-    print('Файл получен и сохранен')
+        update.message.reply_text('Идет процесс конвертации файла...\nВремя конвертации зависит от размера файла...')
 
+        # Конвертируем текст из PDF в аудио
+        audio = gTTS(text=text, lang=language, slow=False)
 
-# # Обработчик команды /pdf_to_mp3
-# def pdf_to_mp3(update: Update, context: CallbackContext) -> None:
-#     file = update.message.document.file_id
-#     file_name = update.message.document.file_name
-#     language = context.args[0] if context.args else 'en'
-#
-#     print('Файл почучен')
-#
-#     update.message.reply_text('[+] Working in progress...')
-#
-#     # Скачиваем PDF-файл с помощью bot.get_file и pdfplumber
-#     pdf_file = context.bot.get_file(file)
-#     with pdf_file.download() as f:
-#         with pdfplumber.open(f) as pdf:
-#             pages = []
-#             for page in pdf.pages:
-#                 pages.append(page.extract_text())
-#
-#     # Конвертируем текст из PDF в аудио
-#     text = ''.join(pages).replace('\n', '')
-#     audio = gTTS(text=text, lang=language, slow=False)
-#
-#     # Сохраняем MP3-файл и отправляем пользователю
-#     audio_file_name = f'{Path(file_name).stem}.mp3'
-#     audio.save(audio_file_name)
-#     update.message.reply_audio(audio=open(audio_file_name, 'rb'))
+        # Сохраняем MP3-файл и отправляем пользователю
+        audio_file_name = str(file_name)
+        n = 4
+        audio_file_name = audio_file_name[:-n]
+        audio_file_name = f'{audio_file_name}.mp3'
+        audio.save(f'download_audio/{audio_file_name}')
+        update.message.reply_audio(audio=open(f'download_audio/{audio_file_name}', 'rb'))
+
+        update.message.reply_text('Конвертация завершена. Приятного прослушивания\n'
+                                  'Для конвертации другого файла нажмите /start')
 
 
 # Обработчик команды /start
-# def start(update: Update, context: CallbackContext) -> None:
-#     keyboard = [[InlineKeyboardButton('Отправить pdf', callback_data='1'),
-#                  InlineKeyboardButton('Русский язык', callback_data='2'),
-#                  InlineKeyboardButton('Английский язык', callback_data='3')]]
-#     reply_markup = InlineKeyboardMarkup(keyboard)
-#     update.message.reply_text('Пожалуйста, выберите: ', reply_markup=reply_markup)
+def start(update, context):
+    button1 = KeyboardButton('Отправить pdf файл')
+    button2 = KeyboardButton('Выбрать русский язык')
+    button3 = KeyboardButton('Выбрать английский язык')
+    markup = ReplyKeyboardMarkup([[button2, button3], [button1]], resize_keyboard=True)
+    context.bot.send_message(chat_id=update.effective_chat.id,
+                             text='Сначала выбери язык, затем отправь pdf файл', reply_markup=markup)
 
 
 def main() -> None:
     updater = Updater(TOKEN, use_context=True)
 
     # Добавляем обработчики команд
+    updater.dispatcher.add_handler(CommandHandler('start', start))
     updater.dispatcher.add_handler(MessageHandler(Filters.regex('Отправить pdf файл'), button1))
     updater.dispatcher.add_handler(MessageHandler(Filters.regex('Выбрать русский язык'), button2))
     updater.dispatcher.add_handler(MessageHandler(Filters.regex('Выбрать английский язык'), button3))
-    updater.dispatcher.add_handler(MessageHandler(Filters.document.pdf, handle_pdf))
-    updater.dispatcher.add_handler(TypeHandler(Update, ask_what_to_do))
+    updater.dispatcher.add_handler(MessageHandler(Filters.document.pdf, pdf_to_mp3))
 
     # Запускаем бота
     updater.start_polling()
+    print('Started')
     updater.idle()
 
 
 if __name__ == '__main__':
     main()
-
-
