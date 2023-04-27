@@ -1,6 +1,6 @@
 import telegram
-from telegram import Update, ReplyKeyboardMarkup, KeyboardButton
-from telegram.ext import (Updater, CommandHandler, CallbackContext, MessageHandler, Filters)
+from telegram import ReplyKeyboardMarkup, KeyboardButton
+from telegram.ext import (Updater, CommandHandler, MessageHandler, Filters)
 from gtts import gTTS
 import pdfplumber
 import settings
@@ -15,7 +15,7 @@ language = ''
 def button1(update, context):
     global language
     if language == '':
-        update.message.reply_text('Сначала выбери язык, потом отправь pdf файл')
+        update.message.reply_text('Сначала выберите язык, потом отправьте pdf файл')
     else:
         update.message.reply_text('Отправьте мне pdf файл')
 
@@ -25,7 +25,7 @@ def button2(update, context):
     global language
     language = 'ru'
     print(f'Выбран {language} язык')
-    update.message.reply_text('Выбран русский язык, теперь отправь pdf файл')
+    update.message.reply_text('Выбран русский язык, теперь отправьте pdf файл')
 
 
 # Кнопка "Выбрать английский язык"
@@ -33,14 +33,14 @@ def button3(update, context):
     global language
     language = 'en'
     print(f'Выбран {language} язык')
-    update.message.reply_text('Выбран английский язык, теперь отправь pdf файл')
+    update.message.reply_text('Выбран английский язык, теперь отправьте pdf файл')
 
 
 # Получение и сохранение файла от пользователя
 def pdf_to_mp3(update, context):
     global language
     if language == '':
-        update.message.reply_text('Сначала выбери язык, потом отправь pdf файл')
+        update.message.reply_text('Сначала выберите язык, потом отправьте pdf файл')
     else:
         # Скачиваем файл пдф
         file_id = update.message.document.file_id
@@ -73,6 +73,9 @@ def pdf_to_mp3(update, context):
         update.message.reply_text('Конвертация завершена. Приятного прослушивания\n'
                                   'Для конвертации другого файла нажмите /start')
 
+        # Обнуляем язык
+        language = ''
+
 
 # Обработчик команды /start
 def start(update, context):
@@ -81,7 +84,7 @@ def start(update, context):
     button3 = KeyboardButton('Выбрать английский язык')
     markup = ReplyKeyboardMarkup([[button2, button3], [button1]], resize_keyboard=True)
     context.bot.send_message(chat_id=update.effective_chat.id,
-                             text='Сначала выбери язык, затем отправь pdf файл', reply_markup=markup)
+                             text='Сначала выберите язык, потом отправьте pdf файл', reply_markup=markup)
 
 
 def main() -> None:
