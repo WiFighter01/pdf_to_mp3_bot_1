@@ -4,11 +4,24 @@ from telegram.ext import (Updater, CommandHandler, MessageHandler, Filters)
 from gtts import gTTS
 import pdfplumber
 import settings
+import os
+import time
 
 # Токен
 TOKEN = settings.TOKEN
 bot = telegram.Bot(token=TOKEN)
 language = ''
+
+
+# Удаление старых загруженных файлов
+def remove_old_files(directory, days=3):
+    current_time = time.time()
+    for file in os.listdir(directory):
+        file_path = os.path.join(directory, file)
+        if os.path.isfile(file_path):
+            if current_time - os.path.getctime(file_path) > (days * 86400):
+                os.remove(file_path)
+                print(f'Удален файл {file_path}')
 
 
 # Кнопка "Отправить файл"
@@ -107,6 +120,11 @@ def main() -> None:
     updater.start_polling()
     print('Бот запущен')
     updater.idle()
+
+    while True:
+        remove_old_files(directory='download_pdf')
+        remove_old_files(directory='download_audio')
+        time.sleep(86400)
 
 
 if __name__ == '__main__':
