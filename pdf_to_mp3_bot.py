@@ -70,11 +70,16 @@ def pdf_to_mp3(update, context):
         audio.save(f'download_audio/{audio_file_name}')
         update.message.reply_audio(audio=open(f'download_audio/{audio_file_name}', 'rb'))
 
-        update.message.reply_text('Конвертация завершена. Приятного прослушивания\n'
+        update.message.reply_text('Конвертация завершена. Приятного прослушивания.\n'
                                   'Для конвертации другого файла нажмите /start')
 
         # Обнуляем язык
         language = ''
+
+
+# Если в чат отправляется не pdf файл
+def not_pdf(update, context):
+    update.message.reply_text('Данный формат не поддерживается.\nОтправьте файл в формате pdf')
 
 
 # Обработчик команды /start
@@ -96,6 +101,7 @@ def main() -> None:
     updater.dispatcher.add_handler(MessageHandler(Filters.regex('Выбрать русский язык'), button2))
     updater.dispatcher.add_handler(MessageHandler(Filters.regex('Выбрать английский язык'), button3))
     updater.dispatcher.add_handler(MessageHandler(Filters.document.pdf, pdf_to_mp3))
+    updater.dispatcher.add_handler(MessageHandler(~Filters.document.pdf, not_pdf))
 
     # Запускаем бота
     updater.start_polling()
